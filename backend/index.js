@@ -19,9 +19,9 @@ app.post("/register",(req,res)=>{
         }
 
         //check if user already exsist or not 
-
-
-
+            
+        if(checkDbforEmail())
+        
 
         //encrpyting the password 
         //if not register in db
