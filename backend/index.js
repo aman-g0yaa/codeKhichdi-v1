@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
-const {DBConnection} = require('./database/db');
+const { DBConnection } = require('./database/db');
 const User = require('./model/User');
 
 DBConnection();
@@ -10,20 +10,20 @@ DBConnection();
 //middleWare
 app.use(bodyParser.json());
 
-app.post("/register", async (req,res)=>{
+app.post("/register", async (req, res) => {
     try {
 
         //get all data from body
-        const {firstName, lastName, email, password} = req.body;
+        const { firstName, lastName, email, password } = req.body;
 
         //validate the data 
-        if(!(firstName && lastName && email && password)){
+        if (!(firstName && lastName && email && password)) {
             throw new Error("Entered Details Invalid");
         }
 
         //check for exsisting user
-        const exisitingUser = await User.findOne({email});
-        if(exisitingUser){
+        const exisitingUser = await User.findOne({ email });
+        if (exisitingUser) {
             return res.status(400).send("User already exsists.");
         }
 
@@ -40,11 +40,11 @@ app.post("/register", async (req,res)=>{
 
         //return response 
         res.status(200).json({
-            message:"User have been successfully registered!",
+            message: "User have been successfully registered!",
             user,
         });
 
-    } catch(error) {
+    } catch (error) {
         console.error(error.message);
         return res.status(400).json({
             error: "Bad Request",
@@ -53,6 +53,37 @@ app.post("/register", async (req,res)=>{
     }
 });
 
-app.listen(5000,()=>{
+
+app.post("/login", async (req, res) => {
+    try {
+        //get user email and pw 
+        const { email, password } = req.body;
+
+        //check valid email and password
+        if (!(email && password)) {
+            res.status(400).send("Invalid email or password");
+        }
+
+        //if email exsist return user 
+        const userDetails = await User.findOne({email}).exec();
+
+        const passwordMatch = await bcrypt.compare(password , userDetails.password);
+
+        if (passwordMatch) {
+            res.status(200).send("User login succesfull!");
+        } else {
+            throw new Error("User Login Failed!");
+        }
+
+    } catch (error) {
+        console.error(error.message);
+        return res.status(400).json({
+            error: "Bad Request",
+            message: error.message
+        });
+    }
+});
+
+app.listen(5000, () => {
     console.log("Server Listening on port 5000!");
 });
