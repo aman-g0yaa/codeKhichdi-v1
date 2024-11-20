@@ -1,14 +1,19 @@
 const express = require('express');
 const app = express();
+const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const { DBConnection } = require('./database/db');
 const User = require('./model/User');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 
 DBConnection();
+dotenv.config();
 
 //middleWare
 app.use(bodyParser.json());
+app.use(cookieParser());
 
 app.post("/register", async (req, res) => {
     try {
@@ -65,15 +70,33 @@ app.post("/login", async (req, res) => {
         }
 
         //if email exsist return user 
-        const userDetails = await User.findOne({email}).exec();
+        const userDetails = await User.findOne({ email }).exec();
 
-        const passwordMatch = await bcrypt.compare(password , userDetails.password);
-
-        if (passwordMatch) {
-            res.status(200).send("User login succesfull!");
-        } else {
+        const passwordMatch = await bcrypt.compare(password, userDetails.password);
+        if (!passwordMatch) {
             throw new Error("User Login Failed!");
         }
+
+        //generate jwt token
+        const token = jwt.sign({id: userDetails._id},process.env.SECRET_KEY, ({
+            expiresIn: "1h",
+        }));
+
+        userDetails.token = token;
+        userDetails.password = undefined;
+
+        //store cookie
+        const option = {
+            expires: new Date(Date.now()+1*24*60*60*1000),
+            httpOnly: true
+        }
+
+        //send token
+        res.status(200).cookie("token", token, option).json({
+            message:"User logged in successfully",
+            token,
+        })
+
 
     } catch (error) {
         console.error(error.message);
